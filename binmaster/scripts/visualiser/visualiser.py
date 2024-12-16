@@ -15,12 +15,30 @@ from flask import Flask
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State
 import can
+import threading
 from protocol import Protocol, PhysicalLayer
 from util import butter_lowpass_filter, detect_bottom, detect_water
 
 
 last_cycle = {'tension': [], 'count': []}
 
+# Added for CAN interface ###################
+def can_listener(bus_channel='vcan0', can_id=0x123):
+    """Listen for CAN messages on specific channel and trigger a cycle on receiving the correct signal"""
+    bus = can.interface.Bus(channel = bus_channel, bustype = 'socketcan')
+    print(f"Listening for CAN messages on {bus_channel}...")
+
+    while True:
+        message = bus.recv() # Blocking call; wait for message
+        if message.abritration_id == can_id:
+            print(f"Received CAN message with ID {hex(can_id)}. Triggering cycle...")
+            
+            defaults = get_defaults_database(True)
+            uid = add_cycle(0, 0, defaults['ascent_rate'], defaults['descent_rate'],
+                            defaults['timeout_0'], defaults['timeout_1'], defaults['timeout_2'],
+                            defaults['timeout_3'], defaults['ramp_rate'])
+            threading.Thread(target=perform_cycle, args=(uid,)).start())
+##################################################
 
 def build_layout():
     """ Builds HTML layout for UI
@@ -239,18 +257,6 @@ def perform_cycle(uid):
     # Read log into global variable
     last_cycle = get_log(uid)
     add_log("Cycle Complete")
-
-# Added for CAN interface ###################
-def receive_can_messages():
-    bus = can.interface.Bus(channel='vcan0', bustype='socketcan', can_filters=[{"can_id": 0x123, "can_mask": 0x7FF}]) #Replace 'vcan0' with 'can0' with Pican-M attached
-    while True:
-        message = bus.recv()
-        if message.arbitration_id == 0x123:  # Replace with your specific CAN ID
-            uid = add_cycle(0, 0, defaults['ascent_rate'], defaults['descent_rate'],
-                            defaults['timeout_0'], defaults['timeout_1'], defaults['timeout_2'],
-                            defaults['timeout_3'], defaults['ramp_rate'])
-            threading.Thread(target=perform_cycle, args=(uid,)).start()
-##################################################
 
 
 def graph(log):
@@ -473,7 +479,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Start CAN message listener in a separate thread
-    can_thread = threading.Thread(target=receive_can_messages)
+    can_thread = threading.Thread(target=can_listener, kwargs={'bus_channel': 'vcan0', 'can_id': 0x123})
+    can_thread.daemon = True  # Thread stops when the main program exits
     can_thread.start()
 
     # Setup serial port to control STM32 in control board
