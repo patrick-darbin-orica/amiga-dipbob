@@ -498,5 +498,5 @@ if __name__ == '__main__':
     mac.execute_set_ramp_rate(defaults['ramp_rate'])
 
     # Run Dash UI
-    app.run_server(debug=False, use_reloader=False, host='0.0.0.0', port = 8051, dev_tools_silence_routes_logging=True)
+    app.run_server(debug=False, use_reloader=False, host='0.0.0.0', port = 8050, dev_tools_silence_routes_logging=True)
 
