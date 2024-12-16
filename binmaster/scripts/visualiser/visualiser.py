@@ -242,7 +242,7 @@ def perform_cycle(uid):
 
 # Added for CAN interface ###################
 def receive_can_messages():
-    bus = can.interface.Bus(channel='vcan0', bustype='socketcan') #Replace 'vcan0' with 'can0' with Pican-M attached
+    bus = can.interface.Bus(channel='vcan0', bustype='socketcan', can_filters=[{"can_id": 0x123, "can_mask": 0x7FF}]) #Replace 'vcan0' with 'can0' with Pican-M attached
     while True:
         message = bus.recv()
         if message.arbitration_id == 0x123:  # Replace with your specific CAN ID
