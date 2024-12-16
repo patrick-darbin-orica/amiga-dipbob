@@ -1,0 +1,104 @@
+[setup]
+name = 'binmaster'
+physical = "serial"
+
+[source]
+language = "python"
+physical = "pyserial"
+gen_helper = true
+
+[dest]
+language = "c"
+host = "stm32"
+physical = "hal"
+
+[protocol]
+    [protocol.cycle]
+    id = 0
+    help = "Cycle Unit"
+    send.length = 0
+    #send.type =
+    recv.length = 0
+    #recv.type =
+
+    [protocol.set_ascent_rate]
+    id = 1
+    help = "Ascent rate (percent)"
+    send.length = 1
+    send.type = "uint8"
+    send.bounds.min = 0
+    send.bounds.max = 100
+    recv.length = 0
+    #recv.type =
+
+    [protocol.set_descent_rate]
+    id = 2
+    help = "Descent rate (percent)"
+    send.length = 1
+    send.type = "uint8"
+    send.bounds.min = 0
+    send.bounds.max = 100
+    recv.length = 0
+    #recv.type =
+
+    [protocol.set_timeout]
+    id = 3
+    help = "[quadrant] [Timeout (0.1ms)]"
+    send.length = 2
+    send.type = "uint16"
+    send.bounds.min = 0
+    send.bounds.max = 65535
+    recv.length = 0
+    #recv.type =
+
+    [protocol.set_ramp_rate]
+    id = 4
+    help = "Ramp rate"
+    send.length = 1
+    send.type = "uint16"
+    send.bounds.min = 0
+    send.bounds.max = 65535
+    recv.length = 0
+    #recv.type =
+
+    [protocol.get_ascent_rate]
+    id = 5
+    help = "Get ascent rate (percent)"
+    send.length = 0
+    #send.type =
+    recv.length = 1
+    recv.type = "uint8"
+
+    [protocol.get_descent_rate]
+    id = 6
+    help = "Get descent rate (percent)"
+    send.length = 0
+    #send.type =
+    recv.length = 1
+    recv.type = "uint8"
+
+    [protocol.get_timeout]
+    id = 7
+    help = "Timeout (10us)"
+    send.length = 1
+    send.type = "uint8"
+    send.bounds.min = 0
+    send.bounds.max = 3
+    recv.length = 1
+    recv.type = "uint16"
+
+    [protocol.get_ramp_rate]
+    id = 8
+    help = "Ramp rate"
+    send.length = 0
+    #send.type =
+    recv.length = 1
+    recv.type = "uint16"
+
+    [protocol.get_previous_level]
+    id = 9
+    help = "Water level and Bottom level"
+    send.length = 0
+    #send.type =
+    recv.length = 2
+    recv.type = "uint16"
