@@ -37,7 +37,7 @@ def can_listener(bus_channel='vcan0', can_id=0x123):
             uid = add_cycle(0, 0, defaults['ascent_rate'], defaults['descent_rate'],
                             defaults['timeout_0'], defaults['timeout_1'], defaults['timeout_2'],
                             defaults['timeout_3'], defaults['ramp_rate'])
-            threading.Thread(target=perform_cycle, args=(uid,)).start())
+            threading.Thread(target=perform_cycle, args=(uid,)).start()
 ##################################################
 
 def build_layout():
