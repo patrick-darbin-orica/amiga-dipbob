@@ -30,7 +30,7 @@ def can_listener(bus_channel='vcan0', can_id=0x123):
 
     while True:
         message = bus.recv() # Blocking call; wait for message
-        if message.abritration_id == can_id:
+        if message.abritration_id == can_id and message.data[0] == 0x01:
             print(f"Received CAN message with ID {hex(can_id)}. Triggering cycle...")
             
             defaults = get_defaults_database(True)
