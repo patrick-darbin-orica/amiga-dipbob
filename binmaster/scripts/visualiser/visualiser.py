@@ -23,7 +23,7 @@ from util import butter_lowpass_filter, detect_bottom, detect_water
 last_cycle = {'tension': [], 'count': []}
 
 # Added for CAN interface ###################
-def can_listener((bus_channel='vcan0', can_id=0x123)):
+def can_listener((bus_channel='can0', can_id=0x123)):
     """Listen for CAN messages on specific channel and trigger a cycle on receiving the correct signal"""
     bus = can.interface.Bus(channel = bus_channel, bustype = 'socketcan')
     print(f"Listening for CAN messages on {bus_channel}...")
