@@ -6,7 +6,7 @@ from protocol import Protocol, PhysicalLayer
 
 # Configure logging
 logging.basicConfig(
-    filename='/binmaster_auto/binmaster/scripts/visualiser/can_listener.log',  # Replace with your desired log file path
+    filename='~/binmaster_auto/binmaster/scripts/visualiser/can_listener.log',  # Replace with your desired log file path
     level=logging.INFO,  # Log only INFO-level messages and above
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
