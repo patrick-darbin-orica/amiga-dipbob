@@ -23,14 +23,14 @@ from util import butter_lowpass_filter, detect_bottom, detect_water
 last_cycle = {'tension': [], 'count': []}
 
 # Added for CAN interface ###################
-def can_listener(bus_channel='can0', can_id=0x123):
+def can_listener(bus_channel='can0', can_id=0x18EF7201):
     """Listen for CAN messages on specific channel and trigger a cycle on receiving the correct signal"""
-    bus = can.interface.Bus(channel = bus_channel, bustype = 'socketcan')
+    bus = can.interface.Bus(channel = bus_channel, interface = 'socketcan')
     print(f"Listening for CAN messages on {bus_channel}...")
 
     while True:
         message = bus.recv() # Blocking call; wait for message
-        if message.arbitration_id == can_id and message.data[0] == 0x01:
+        if message.arbitration_id == can_id and len(message.data) >= 1 and message.data[0] == 0x01:
             add_log("Started Cycle")
             
             defaults = get_defaults_database(True)

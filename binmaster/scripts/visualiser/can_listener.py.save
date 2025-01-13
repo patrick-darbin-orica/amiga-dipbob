@@ -1,0 +1,166 @@
+import argparse
+import subprocess
+import can
+import serial
+from protocol import Protocol, PhysicalLayer
+
+# Initialise serial
+The recurring errors suggest two critical issues in your `can_listener.py` script and its systemd setup:
+
+---
+
+### **Key Problems**
+1. **`NameError: name 'mac' is not defined`**:
+   - This error occurs because the `mac` object is referenced before it is initialized.
+   - The error persists because `mac` is missing from your script’s initialization logic.
+
+2. **`NameError: name 'serial' is not defined`**:
+   - This error occurs because the `serial` module is used in an `except` block but hasn’t been imported.
+
+---
+
+### **Fixing the Issues**
+
+#### **1. Ensure `mac` is Properly Initialized**
+You need to initialize `mac` (and its dependency `phy`) before any cycle execution or exception handling occurs. Update your script like this:
+
+```python
+import serial  # Ensure serial is imported
+from protocol import Protocol, PhysicalLayer
+
+# Initialize serial communication
+phy = PhysicalLayer(baud=1000000, port='/dev/ttyACM0')  # Replace with args if using argparse
+mac = Protocol(phy)
+```
+
+#### **2. Properly Handle Serial Exceptions**
+Make sure `serial.SerialException` is only used in a `try-except` block where `serial` is relevant. Here’s an example:
+
+```python
+try:
+    buf = mac.execute_cycle()
+except serial.SerialException as e:
+    print(f"Serial communication error: {e}. Resetting serial port.")
+    if phy.port:
+        phy.port.close()
+    phy.port = serial.Serial('/dev/ttyACM0', 1000000, timeout=1)  # Reinitialize port
+    buf = None
+```
+
+#### **3. Update `can_listener.py` to Initialize Everything Correctly**
+Here’s an updated snippet for `can_listener.py`:
+
+```python
+import serial
+import can
+from protocol import Protocol, PhysicalLayer
+
+# Initialize serial communication
+phy = PhysicalLayer(baud=1000000, port='/dev/ttyACM0')  # Update port/baudrate as necessary
+mac = Protocol(phy)
+
+def wait_for_can_signal(bus_channel, can_id):
+    """Wait for a specific CAN signal to start the cycle."""
+    print(f"Listening for CAN messages on {bus_channel}...")
+    with can.interface.Bus(channel=bus_channel, interface='socketcan') as bus:
+        while True:
+            message = bus.recv()  # Blocking call
+            if message.arbitration_id == can_id and len(message.data) > 0 and message.data[0] == 0x01:
+                print(f"Received valid CAN signal: ID={message.arbitration_id}, Data={message.data}")
+                return
+            else:
+                print(f"Ignored invalid CAN signal: ID={message.arbitration_id}, Data={message.data}")
+
+try:
+    wait_for_can_signal('vcan0', 0x123)
+    buf = mac.execute_cycle()
+    print(f"Cycle completed: {buf}")
+except serial.SerialException as e:
+    print(f"Serial communication error: {e}. Resetting serial port.")
+    if phy.port:
+        phy.port.close()
+    phy.port = serial.Serial('/dev/ttyACM0', 1000000, timeout=1)  # Reinitialize port
+```
+
+---
+
+### **4. Fix the Systemd Service**
+To avoid multiple instances of the script running simultaneously:
+1. **Update the `ExecStartPre` Field**:
+   Modify the service file to terminate any running instance of `can_listener.py`:
+   ```ini
+   ExecStartPre=/bin/bash -c "if pgrep -f can_listener.py; then killall python3; fi"
+   ```
+
+2. **Reload and Restart the Service**:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart visualiser.service
+   ```
+
+---
+
+### **5. Test the Updated Script**
+1. **Send Valid and Invalid Signals**:
+   ```bash
+   cansend vcan0 123#01  # Valid
+   cansend vcan0 123#00  # Invalid
+   ```
+
+2. **Monitor Logs**:
+   ```bash
+   sudo journalctl -u visualiser.service --since "5 minutes ago"
+   ```
+
+---
+
+### **Expected Outcome**
+- The service should no longer crash.
+- Invalid CAN signals will be ignored.
+- Valid CAN signals will execute the cycle properly.
+
+Let me know if the errors persist!
+
+def wait_for_can_signal(bus_channel, can_id):
+    """Wait for a specific CAN signal to start the cycle."""
+    print(f"Listening for CAN messages on {bus_channel}...")
+    with can.interface.Bus(channel=bus_channel, interface='socketcan') as bus:
+        while True:
+            message = bus.recv()  # Blocking call
+            if message.arbitration_id == can_id:
+                if len(message.data) > 0 and message.data[0] == 0x01:
+                    print(f"Received valid CAN signal: ID={message.arbitration_id}, Data={message.data}")
+                    return
+                else:
+                    print(f"Ignored invalid CAN signal: ID={message.arbitration_id}, Data={message.data}")
+
+try:
+    buf = mac.execute_cycle()
+except serial.SerialException as e:
+    print(f"Serial communication error: {e}. Resetting serial port.")
+    if phy.port:
+        phy.port.close()
+    phy.port = serial.Serial(args.port, args.baud, timeout=1)  # Reinitialize the port
+    buf = None
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='CAN Trigger for Dip and Bob Cycle')
+    parser.add_argument('--can-channel', help='CAN bus channel', default='vcan0', dest='can_channel')
+    parser.add_argument('--can-id', help='CAN signal ID', type=int, default=0x123, dest='can_id')
+    parser.add_argument('--cycle-script', help='Path to cycle.py script', default='cycle.py', dest='cycle_script')
+    args = parser.parse_args()
+
+    while True:
+        # Wait for CAN signal
+        wait_for_can_signal(args.can_channel, args.can_id)
+
+        # Trigger cycle.py as a subprocess
+        result = subprocess.run(
+            ['python3', '/home/ubuntu/binmaster_auto/binmaster/scripts/visualiser/cycle.py', '-f', 'logs/latest_cycle.json'],
+            capture_output=True,
+            text=True
+        )
+
+        # Print output from cycle.py
+        print(result.stdout)
+        print(result.stderr)
