@@ -6,7 +6,7 @@ from protocol import Protocol, PhysicalLayer
 
 # Configure logging
 logging.basicConfig(
-    filename='~/binmaster_auto/binmaster/scripts/visualiser/can_listener.log',  # Replace with your desired log file path
+    filename='/home/ubuntu/binmaster_auto/binmaster/scripts/visualiser/can_listener.log',  # Replace with your desired log file path
     level=logging.INFO,  # Log only INFO-level messages and above
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -23,7 +23,7 @@ def wait_for_can_signal(bus_channel, can_id, trigger_byte):
         while True:
             message = bus.recv()  # Blocking call
             if message.arbitration_id == can_id:
-                logging.info(f"Received: ID={message.arbitration_id}, Data={message.data}")
+              #  logging.info(f"Received: ID={message.arbitration_id}, Data={message.data}")
                 if len(message.data) > 2 and message.data[2] & trigger_byte:  # Check for Button A (3rd byte = 02)
                     logging.info(f"Button A detected: ID={message.arbitration_id}, Data={message.data}")
                     print(f"Received valid CAN signal for Button A: ID={message.arbitration_id}, Data={message.data}")
