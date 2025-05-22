@@ -1,0 +1,39 @@
+2025-05-22 14:51:48,778 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:51:48,794 - INFO - Created a socket
+2025-05-22 14:51:56,661 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:51:56,677 - INFO - Created a socket
+2025-05-22 14:51:58,766 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:51:58,766 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:52:03,514 - INFO - Cycle completed: 
+2025-05-22 14:52:03,515 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:52:03,518 - INFO - Created a socket
+2025-05-22 14:52:07,596 - INFO - Cycle completed: Depth measurement: 630.3 mm
+
+2025-05-22 14:52:07,597 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:52:07,598 - INFO - Created a socket
+2025-05-22 14:52:16,673 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:52:16,673 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:52:21,459 - INFO - Cycle completed: 
+2025-05-22 14:52:21,459 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:52:21,460 - INFO - Created a socket
+2025-05-22 14:52:25,533 - INFO - Cycle completed: Depth measurement: 637.9399999999999 mm
+
+2025-05-22 14:52:25,534 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:52:25,535 - INFO - Created a socket
+2025-05-22 14:53:21,647 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:53:21,663 - INFO - Created a socket
+2025-05-22 14:53:23,388 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:53:31,952 - INFO - Cycle completed: Depth measurement: 641.76 mm
+
+2025-05-22 14:53:31,953 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:53:31,954 - INFO - Created a socket
+2025-05-22 14:55:28,715 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x07\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:55:37,345 - INFO - Cycle completed: Depth measurement: 676.14 mm
+
+2025-05-22 14:55:37,345 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:55:37,346 - INFO - Created a socket
+2025-05-22 14:55:46,808 - INFO - Button A detected: ID=419364871, Data=bytearray(b'\x06\x00\x02\x00\x00\x00\x00\x00')
+2025-05-22 14:55:55,514 - INFO - Cycle completed: Depth measurement: 678.05 mm
+
+2025-05-22 14:55:55,514 - INFO - Listening for CAN messages on can0...
+2025-05-22 14:55:55,515 - INFO - Created a socket
