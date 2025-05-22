@@ -1,0 +1,7 @@
+# ignore any directory named “logs” (and everything under it), anywhere in the tree
+**/logs/
+**/logs/**
+
+# ignore any directory named “csvs” (and everything under it), anywhere in the tree
+**/csvs/
+**/csvs/**
