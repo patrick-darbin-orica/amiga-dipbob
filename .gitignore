@@ -6,9 +6,9 @@
 **/csvs/
 **/csvs/**
 
-# ignore any directory named "venvs"
-**/venvs/
-**/venvs/**
+# ignore any directory named "venv"
+**/venv/
+**/venv/**
 
-**/.venvs/
-**/.venvs/**
+**/.venv/
+**/.venv/**
