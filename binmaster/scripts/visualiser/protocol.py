@@ -33,6 +33,8 @@ class Protocol(object):
             'get_timeout': struct.pack('>B', 7),
             'get_ramp_rate': struct.pack('>B', 8),
             'get_previous_level': struct.pack('>B', 9),
+            'send_motor_up': struct.pack('>B', 10),
+            'send_motor_down': struct.pack('>B', 11)
         }
         self.variables = {'uint8': {'packing': '>B', 'length': 1}, 'uint16': {'packing': '>H', 'length': 2},
                           'uint32': {'packing': '>I', 'length': 4}, 'int8': {'packing': '>b', 'length': 1},
@@ -103,3 +105,10 @@ class Protocol(object):
         self.phy.write(self.commands['get_previous_level'])
         return_data = self.phy.read(2 * self.variables['uint16']['length'])
         return [x[0] for x in struct.iter_unpack(self.variables['uint16']['packing'], return_data)]
+    
+    def send_motor_up(self):
+        self.phy.write(self.commands['send_motor_up'])
+        
+        
+    def send_motor_down(self):
+        self.phy.write(self.commands['send_motor_down'])

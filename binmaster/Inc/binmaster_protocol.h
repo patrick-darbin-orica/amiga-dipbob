@@ -31,6 +31,8 @@ typedef enum {
     GET_TIMEOUT = 7,
     GET_RAMP_RATE = 8,
     GET_PREVIOUS_LEVEL = 9,
+    SEND_MOTOR_UP = 10,
+    SEND_MOTOR_DOWN = 11,
 } ProtocolCommands;
 
 /* Private define ------------------------------------------------------------*/
@@ -49,5 +51,7 @@ void execute_get_descent_rate(void);
 void execute_get_timeout(uint8_t *data, uint16_t length);
 void execute_get_ramp_rate(void);
 void execute_get_previous_level(void);
+void execute_send_motor_up(void);
+void execute_send_motor_down(void);
 
 #endif /* __BINMASTER_PROTOCOL_H */

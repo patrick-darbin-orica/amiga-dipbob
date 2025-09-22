@@ -57,6 +57,12 @@ ProtocolErrorStatus processProtocolCommand(uint8_t *data, uint16_t length) {
     case GET_PREVIOUS_LEVEL:
       execute_get_previous_level();
       break;
+    case SEND_MOTOR_UP:
+      execute_send_motor_up();
+      break;
+    case SEND_MOTOR_DOWN:
+      execute_send_motor_down();
+      break;
   }
   return PROTOCOL_SUCCESS;
 }
@@ -190,3 +196,25 @@ __weak void execute_get_previous_level(void) {
            within user file
   */
 }
+
+/**
+ * @brief Send motor up command
+ *
+ * @retval None
+ *
+ */
+__weak void execute_send_motor_up(void) {
+  /* NOTE: This function should be implemented when the callback is needed
+           within user file
+  */
+ }
+
+/** * @brief Send motor down command
+ *        @retval None                                                                                    
+ *       */       
+
+__weak void execute_send_motor_down(void) {
+  /* NOTE: This function should be implemented when the callback is needed
+           within user file
+  */
+ }

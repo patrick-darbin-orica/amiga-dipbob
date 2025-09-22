@@ -120,35 +120,37 @@ if __name__ == '__main__':
         if event == "CYCLE":
             print("Cycle command received")
             buf = mac.execute_cycle()
+            try:
+                bottom_info = detect_bottom(buf)
+                depth = bottom_info['depth']
+                water_level = bottom_info.get('water_level', 'N/A')
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                # Log results
+                logging.info(
+                    f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+
+                # Append to CSV
+                with open(csv_file_path, 'a', newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(
+                        [args.hole_number, timestamp, depth, water_level])
+
+                print(
+                    f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+
+                # Increment hole number for the next cycle
+                args.hole_number += 1
+
+            except Exception as e:
+                logging.error(f"Error during bottom detection: {e}")
+                print(f"Error: {e}")
+
         elif event == "UP":
+            mac.motor_up()  
             print("Motor up command received")
-            mac.send_motor_up()   # placeholder for whatever you already have
         elif event == "DOWN":
+            mac.motor_down() 
             print("Motor down command received")
-            mac.send_motor_down()  # placeholder
 
-        try:
-            bottom_info = detect_bottom(buf)
-            depth = bottom_info['depth']
-            water_level = bottom_info.get('water_level', 'N/A')
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            # Log results
-            logging.info(
-                f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
-
-            # Append to CSV
-            with open(csv_file_path, 'a', newline='') as csv_file:
-                csv_writer = csv.writer(csv_file)
-                csv_writer.writerow(
-                    [args.hole_number, timestamp, depth, water_level])
-
-            print(
-                f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
-
-            # Increment hole number for the next cycle
-            args.hole_number += 1
-
-        except Exception as e:
-            logging.error(f"Error during bottom detection: {e}")
-            print(f"Error: {e}")
+        
