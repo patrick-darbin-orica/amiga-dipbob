@@ -24,6 +24,7 @@ os.makedirs(CSV_DIR, exist_ok=True)
 # Create new files
 
 
+
 def get_next_file_number(directory, extension):
     files = [f for f in os.listdir(directory) if f.endswith(extension)]
     if not files:
@@ -108,6 +109,8 @@ logging.basicConfig(
 phy = PhysicalLayer(baud=1000000, port='/dev/ttyACM0')
 mac = Protocol(phy)
 
+# Offset plumbob to ground distance (mm)
+DEPTH_OFFSET_MM = 707.0
 # Open weight serial once
 ser_weight = None
 if serial:
@@ -216,8 +219,9 @@ with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
                 # 3) Detect bottom / extract depth & water level from 'buf'
                 try:
                     bottom_info = detect_bottom(buf)
-                    depth = bottom_info['depth']
-                    water_level = bottom_info.get('water_level', 'N/A')
+                    depth_raw = bottom_info['depth']
+                    depth = round((depth_raw - DEPTH_OFFSET_MM)/1000, 3)  # factors in offset and converts mm to m
+                    water_level = bottom_info.get('water_level', 'N/A') # TODO: Measure water level if needed
 
                     # 4) Single timestamp for this sample
                     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -225,7 +229,7 @@ with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
                     # 5) Log + CSV exactly once
                     weight_str = f"{weight_kg:.3f}" if weight_kg is not None else ""
                     logging.info(
-                        f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
+                        f"Hole {args.hole_number}: Depth={depth} m, Water Level={water_level}, "
                         f"Weight={weight_str or 'N/A'} kg"
                     )
 
@@ -233,7 +237,7 @@ with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow([args.hole_number, timestamp, depth, water_level, weight_str or 'N/A'])
 
-                    print(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
+                    print(f"Hole {args.hole_number}: Depth={depth} m, Water Level={water_level}, "
                         f"Weight={weight_str or 'NA'} kg")
 
                     args.hole_number += 1
