@@ -34,7 +34,8 @@ class Protocol(object):
             'get_ramp_rate': struct.pack('>B', 8),
             'get_previous_level': struct.pack('>B', 9),
             'send_motor_up': struct.pack('>B', 10),
-            'send_motor_down': struct.pack('>B', 11)
+            'send_motor_down': struct.pack('>B', 11),
+            'send_motor_stop': struct.pack('>B', 12)
         }
         self.variables = {'uint8': {'packing': '>B', 'length': 1}, 'uint16': {'packing': '>H', 'length': 2},
                           'uint32': {'packing': '>I', 'length': 4}, 'int8': {'packing': '>b', 'length': 1},
@@ -112,3 +113,6 @@ class Protocol(object):
         
     def send_motor_down(self):
         self.phy.write(self.commands['send_motor_down'])
+        
+    def send_motor_stop(self):
+        self.phy.write(self.commands['send_motor_stop'])

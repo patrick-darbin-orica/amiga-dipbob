@@ -31,6 +31,9 @@ class Protocol(object):
             'get_timeout': struct.pack('>B', 7),
             'get_ramp_rate': struct.pack('>B', 8),
             'get_previous_level': struct.pack('>B', 9),
+            'send_motor_up':struct.pack('>B', 10),
+            'send_motor_down':struct.pack('>B', 11),
+            'send_motor_stop': struct.pack('>B', 12)
         }
         self.variables = {'uint8': {'packing': '>B', 'length': 1}, 'uint16': {'packing': '>H', 'length': 2},
                           'uint32': {'packing': '>I', 'length': 4}, 'int8': {'packing': '>b', 'length': 1},
@@ -105,7 +108,16 @@ class Protocol(object):
         print('get_previous_level sent')
         return_data = self.phy.read(2 * self.variables['uint16']['length'])
         print([x[0] for x in struct.iter_unpack(self.variables['uint16']['packing'], return_data)])
+        
+    def send_motor_up(self):
+        self.phy.write(self.commands['send_motor_up'])
 
+    def send_motor_down(self):
+        self.phy.write(self.commands['send_motor_down'])
+
+    def send_motor_stop(self):
+        self.phy.write(self.commands['send_motor_stop'])
+        
     def execute_command(self, text: str):
         """ Executes a command. Not this will not validate, recommended that command is tested first with
         validate_command
@@ -134,6 +146,12 @@ class Protocol(object):
             return self.execute_get_ramp_rate()
         elif command == 'get_previous_level':
             return self.execute_get_previous_level()
+        elif command == 'send_motor_up':
+            return self.execute_send_motor_up()
+        elif command == 'send_motor_down':
+            return self.execute_send_motor_down()
+        elif command == 'send_motor_stop':
+            return self.execute_send_motor_stop()   
 
     @staticmethod
     def validate_cycle(text):
@@ -231,6 +249,21 @@ class Protocol(object):
             raise ValidationError(message='The input contains unexpected characters', cursor_position=18)
 
     @staticmethod
+    def validate_send_motor_up(text):
+        if text != 'send_motor_up':
+            raise ValidationError(message='The input contains unexpected characters', cursor_position=18)
+
+    @staticmethod
+    def validate_send_motor_down(text):
+        if text != 'send_motor_down':
+            raise ValidationError(message='The input contains unexpected characters', cursor_position=18)
+
+    @staticmethod
+    def validate_send_motor_stop(text):
+        if text != 'send_motor_stop':
+            raise ValidationError(message='The input contains unexpected characters', cursor_position=18)
+
+    @staticmethod
     def validate_command(text: str):
         """ Determines in text begins with a valid command
 
@@ -258,3 +291,10 @@ class Protocol(object):
             return Protocol.validate_get_ramp_rate
         elif command == 'get_previous_level':
             return Protocol.validate_get_previous_level
+        elif command == 'send_motor_up':
+            return Protocol.validate_send_motor_up
+        elif command == 'send_motor_down':
+            return Protocol.validate_send_motor_down
+        elif command == 'send_motor_stop':
+            return Protocol.validate_send_motor_stop
+        

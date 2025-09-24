@@ -2,6 +2,7 @@ import json
 import argparse
 import can
 import logging
+import time
 from protocol import Protocol, PhysicalLayer
 from datetime import datetime
 from util import detect_bottom
@@ -113,44 +114,94 @@ if __name__ == '__main__':
     #     # wait_for_can_signal(args.can_channel, args.can_id, 0x08)  # Motor Up
     #     # wait_for_can_signal(args.can_channel, args.can_id, 0x10)  # Motor Down
     #     buf = mac.execute_cycle()
-    TRIGGERS = [("CYCLE", 0x02), ("UP", 0x08), ("DOWN", 0x10)]
+    # Bit masks in message.data[2]
+CYCLE_MASK = 0x02
+UP_MASK    = 0x08
+DOWN_MASK  = 0x10
+
+HOLD_TIMEOUT_S = 0.30  # if we don't see a refresh within this, treat as release
+
+with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
+    prev_bits = 0
+
+    # Track "considered held" state + last-seen times
+    up_held = False
+    down_held = False
+    up_last_seen   = 0.0
+    down_last_seen = 0.0
 
     while True:
-        event = wait_for_can_event(args.can_channel, args.can_id, TRIGGERS)
-        if event == "CYCLE":
-            print("Cycle command received")
-            buf = mac.execute_cycle()
-            try:
-                bottom_info = detect_bottom(buf)
-                depth = bottom_info['depth']
-                water_level = bottom_info.get('water_level', 'N/A')
-                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now = time.monotonic()
 
-                # Log results
-                logging.info(
-                    f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+        # Poll CAN (non-blocking-ish)
+        msg = bus.recv(timeout=0.05)
+        if msg and msg.arbitration_id == args.can_id and len(msg.data) > 2:
+            b = msg.data[2]
 
-                # Append to CSV
-                with open(csv_file_path, 'a', newline='') as csv_file:
-                    csv_writer = csv.writer(csv_file)
-                    csv_writer.writerow(
-                        [args.hole_number, timestamp, depth, water_level])
+            # --- Cycle (rising edge only) ---
+            if (b & CYCLE_MASK) and not (prev_bits & CYCLE_MASK):
+                print("Cycle command received")
+                buf = mac.execute_cycle()
+                try:
+                    bottom_info = detect_bottom(buf)
+                    depth = bottom_info['depth']
+                    water_level = bottom_info.get('water_level', 'N/A')
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                print(
-                    f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+                    logging.info(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+                    with open(csv_file_path, 'a', newline='') as csv_file:
+                        csv.writer(csv_file).writerow([args.hole_number, timestamp, depth, water_level])
+                    print(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+                    args.hole_number += 1
+                except Exception as e:
+                    logging.error(f"Error during bottom detection: {e}")
+                    print(f"Error: {e}")
 
-                # Increment hole number for the next cycle
-                args.hole_number += 1
+            # --- PTO: UP press/hold/release ---
+            if (b & UP_MASK):
+                # rising edge → start
+                if not up_held:
+                    mac.send_motor_up()
+                    up_held = True
+                    print("Motor up (press)")
+                up_last_seen = now  # refresh heartbeat while held
+            else:
+                # explicit falling edge (if a release frame actually arrives)
+                if up_held and (prev_bits & UP_MASK):
+                    mac.send_motor_stop()
+                    up_held = False
+                    print("Motor stop (UP release)")
 
-            except Exception as e:
-                logging.error(f"Error during bottom detection: {e}")
-                print(f"Error: {e}")
+            # --- PTO: DOWN press/hold/release ---
+            if (b & DOWN_MASK):
+                if not down_held:
+                    mac.send_motor_down()
+                    down_held = True
+                    print("Motor down (press)")
+                down_last_seen = now
+            else:
+                if down_held and (prev_bits & DOWN_MASK):
+                    mac.send_motor_stop()
+                    down_held = False
+                    print("Motor stop (DOWN release)")
 
-        elif event == "UP":
-            mac.motor_up()  
-            print("Motor up command received")
-        elif event == "DOWN":
-            mac.motor_down() 
-            print("Motor down command received")
+            # --- Safety: both engaged -> stop ---
+            if (b & UP_MASK) and (b & DOWN_MASK):
+                mac.send_motor_stop()
+                up_held = down_held = False
+                print("Motor stop (both pressed)")
 
-        
+            print(f"bits: prev=0x{prev_bits:02X} -> now=0x{b:02X}")
+            prev_bits = b
+
+        # -------- Watchdog for missing release frames --------
+        # If the bus goes quiet after a press, these will still stop the motor.
+        if up_held and (now - up_last_seen) > HOLD_TIMEOUT_S:
+            mac.send_motor_stop()
+            up_held = False
+            print("Motor stop (UP timeout)")
+
+        if down_held and (now - down_last_seen) > HOLD_TIMEOUT_S:
+            mac.send_motor_stop()
+            down_held = False
+            print("Motor stop (DOWN timeout)")

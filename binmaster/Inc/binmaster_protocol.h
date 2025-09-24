@@ -33,6 +33,7 @@ typedef enum {
     GET_PREVIOUS_LEVEL = 9,
     SEND_MOTOR_UP = 10,
     SEND_MOTOR_DOWN = 11,
+	SEND_MOTOR_STOP = 12
 } ProtocolCommands;
 
 /* Private define ------------------------------------------------------------*/
@@ -53,5 +54,6 @@ void execute_get_ramp_rate(void);
 void execute_get_previous_level(void);
 void execute_send_motor_up(void);
 void execute_send_motor_down(void);
+void execute_send_motor_stop(void);
 
 #endif /* __BINMASTER_PROTOCOL_H */
