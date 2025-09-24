@@ -226,12 +226,12 @@ with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
                     weight_str = f"{weight_kg:.3f}" if weight_kg is not None else ""
                     logging.info(
                         f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
-                        f"Weight={weight_str or 'NA'} kg"
+                        f"Weight={weight_str or 'N/A'} kg"
                     )
 
                     with open(csv_file_path, 'a', newline='') as csv_file:
                         csv_writer = csv.writer(csv_file)
-                        csv_writer.writerow([args.hole_number, timestamp, depth, water_level, weight_str])
+                        csv_writer.writerow([args.hole_number, timestamp, depth, water_level, weight_str or 'N/A'])
 
                     print(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
                         f"Weight={weight_str or 'NA'} kg")
