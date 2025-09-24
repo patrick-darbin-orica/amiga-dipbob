@@ -2,7 +2,8 @@ import json
 import argparse
 import can
 import logging
-import time
+import re, time
+import serial
 from protocol import Protocol, PhysicalLayer
 from datetime import datetime
 from util import detect_bottom
@@ -12,6 +13,10 @@ import csv
 # Log and CSV file directories
 LOG_DIR = "/home/ubuntu/amiga-dipbob/binmaster/scripts/visualiser/logs"
 CSV_DIR = "/home/ubuntu/amiga-dipbob/binmaster/scripts/visualiser/csvs"
+
+# RS-232 weight indicator config
+WEIGHT_DEV = "/dev/ttyUSB0"
+WEIGHT_BAUD = 9600
 
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(CSV_DIR, exist_ok=True)
@@ -25,6 +30,65 @@ def get_next_file_number(directory, extension):
         return 1
     numbers = [int(f.split('.')[0].split('_')[-1]) for f in files]
     return max(numbers) + 1
+
+def _parse_weight_line(line: str):
+    # e.g. "ST,GS       0kg"
+    s = line.strip()
+    if not s: return None
+    status = []
+    m = re.match(r'^([A-Z]{2})(?:,([A-Z]{2}))?\s*(.*)$', s)
+    rest = s
+    if m:
+        status = [t for t in m.groups()[:2] if t]
+        rest = m.group(3)
+    m2 = re.search(r'(-?\d+(?:\.\d+)?)\s*([a-zA-Z]+)', rest)
+    if not m2: return None
+    val = float(m2.group(1))
+    unit = m2.group(2).lower()
+    if unit == "g": val /= 1000.0
+    return (round(val, 3), status)
+
+
+def read_weight_stable(ser, wait_s: float = 1.5, prefer_stable: bool = True):
+    if ser is None: return None
+    deadline = time.time() + wait_s
+    last = None
+    while time.time() < deadline:
+        line = ser.readline().decode(errors="ignore")
+        if not line:
+            continue
+        parsed = _parse_weight_line(line)
+        if not parsed:
+            continue
+        val, status = parsed
+        last = val
+        if (not prefer_stable) or ("ST" in status):
+            return val
+    return last
+
+
+def read_weight_once(ser, wait_s: float = 1.0):
+    """
+    Non-blocking-ish: read lines for up to wait_s seconds and return first parsed kg value.
+    Falls back to last parsed in window if none parse cleanly early.
+    """
+    if ser is None:
+        return None
+    deadline = time.time() + wait_s
+    last_val = None
+    while time.time() < deadline:
+        try:
+            line = ser.readline().decode(errors="ignore")
+        except Exception:
+            break
+        if not line:
+            continue
+        val = _parse_weight_line(line)
+        if val is not None:
+            return round(val, 3)
+        # remember last parsable if needed later
+        last_val = val
+    return last_val
 
 
 # Generate auto-incremented file paths
@@ -44,27 +108,30 @@ logging.basicConfig(
 phy = PhysicalLayer(baud=1000000, port='/dev/ttyACM0')
 mac = Protocol(phy)
 
+# Open weight serial once
+ser_weight = None
+if serial:
+    try:
+        ser_weight = serial.Serial(
+            WEIGHT_DEV, WEIGHT_BAUD,
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            timeout=0.2,
+            xonxoff=False,
+            rtscts=False,
+        )
+        ser_weight.reset_input_buffer()
+    except Exception as e:
+        logging.warning(f"Weight serial not available on {WEIGHT_DEV}: {e}")
+
+
 if not os.path.exists(csv_file_path):
     with open(csv_file_path, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(["Hole Number", "Timestamp",
-                            "Depth (mm)", "Water Level (mm)"])
+                            "Depth (mm)", "Water Level (mm)", "Weight (kg)"])
 
-
-# TODO: Create new function for motor up and motor down signals
-# def wait_for_can_signal(bus_channel, can_id, trigger_byte):
-#     """Wait for a specific CAN signal to start the cycle."""
-#     with can.interface.Bus(channel=bus_channel, interface='socketcan') as bus:
-#         while True:
-#             message = bus.recv()  # Blocking call
-#             if message.arbitration_id == can_id:
-#                 # Check for Button A (3rd byte = 02)
-#                 if len(message.data) > 2 and message.data[2] & trigger_byte:
-#                     logging.info(
-#                         f"Signal detected at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-#                     return
-
-# replaces: wait_for_can_signal(bus_channel, can_id, trigger_byte) -> None
 def wait_for_can_event(bus_channel, can_id, bitmap, timeout=None):
     """
     Block until a CAN frame with matching can_id arrives where data[2] matches one of the masks.
@@ -107,14 +174,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # while True:
-    #     # Wait for Button A signal
-    #     wait_for_can_signal(args.can_channel, args.can_id,
-    #                         0x02)  # Execute cycle
-    #     # wait_for_can_signal(args.can_channel, args.can_id, 0x08)  # Motor Up
-    #     # wait_for_can_signal(args.can_channel, args.can_id, 0x10)  # Motor Down
-    #     buf = mac.execute_cycle()
-    # Bit masks in message.data[2]
 CYCLE_MASK = 0x02
 UP_MASK    = 0x08
 DOWN_MASK  = 0x10
@@ -141,18 +200,44 @@ with can.interface.Bus(channel=args.can_channel, interface='socketcan') as bus:
             # --- Cycle (rising edge only) ---
             if (b & CYCLE_MASK) and not (prev_bits & CYCLE_MASK):
                 print("Cycle command received")
+
+                # 1) Execute the cycle (returns raw buffer for depth/water processing)
                 buf = mac.execute_cycle()
+
+                # 2) Flush old serial lines and read a fresh, stable weight
+                if ser_weight:
+                    try:
+                        ser_weight.reset_input_buffer()
+                    except Exception:
+                        pass
+                time.sleep(0.6)  # allow a fresh frame to arrive; tune 0.4–1.0s if needed
+                weight_kg = read_weight_stable(ser_weight, wait_s=2.0, prefer_stable=True)  # assumes helper is defined
+
+                # 3) Detect bottom / extract depth & water level from 'buf'
                 try:
                     bottom_info = detect_bottom(buf)
                     depth = bottom_info['depth']
                     water_level = bottom_info.get('water_level', 'N/A')
+
+                    # 4) Single timestamp for this sample
                     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                    logging.info(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+                    # 5) Log + CSV exactly once
+                    weight_str = f"{weight_kg:.3f}" if weight_kg is not None else ""
+                    logging.info(
+                        f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
+                        f"Weight={weight_str or 'NA'} kg"
+                    )
+
                     with open(csv_file_path, 'a', newline='') as csv_file:
-                        csv.writer(csv_file).writerow([args.hole_number, timestamp, depth, water_level])
-                    print(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}")
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([args.hole_number, timestamp, depth, water_level, weight_str])
+
+                    print(f"Hole {args.hole_number}: Depth={depth} mm, Water Level={water_level}, "
+                        f"Weight={weight_str or 'NA'} kg")
+
                     args.hole_number += 1
+
                 except Exception as e:
                     logging.error(f"Error during bottom detection: {e}")
                     print(f"Error: {e}")

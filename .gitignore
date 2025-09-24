@@ -1,9 +1,20 @@
-# ignore any directory named “logs” (and everything under it), anywhere in the tree
-**/logs/
-**/logs/**
+# project outputs anywhere
+logs/
+csvs/
 
-# ignore any directory named “csvs” (and everything under it), anywhere in the tree
-**/csvs/
-**/csvs/**
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
 
-**__pychache__**
+# virtual envs (any common names)
+.venv/
+venv/
+env/
+ENV/
+
+# misc
+*.db
