@@ -5,3 +5,5 @@
 # ignore any directory named “csvs” (and everything under it), anywhere in the tree
 **/csvs/
 **/csvs/**
+
+**__pychache__**
