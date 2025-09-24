@@ -212,11 +212,11 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-  /** Configure LSE Drive Capability 
+  /** Configure LSE Drive Capability
   */
   HAL_PWR_EnableBkUpAccess();
   __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
@@ -234,7 +234,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -253,13 +253,13 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
   {
     Error_Handler();
   }
-  /** Enable MSI Auto calibration 
+  /** Enable MSI Auto calibration
   */
   HAL_RCCEx_EnableMSIPLLMode();
 }
@@ -547,10 +547,10 @@ static void MX_USART2_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
@@ -979,7 +979,19 @@ void execute_get_previous_level(void) {
   HAL_UART_Transmit(TERMINAL_UART, (uint8_t*) levels, 4, 0xFFFF);
 }
 
+void execute_send_motor_up(void) {
+  motor_up(ascent_rate, true);
+}
 
+void execute_send_motor_down(void) {
+  motor_down(descent_rate, true);
+}
+
+void execute_send_motor_stop(void) {
+	if (state == IDLE){
+		motor_stop();
+	}
+}
 /* USER CODE END 4 */
 
 /**
@@ -1003,7 +1015,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(char *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
